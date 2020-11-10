@@ -31,20 +31,54 @@ namespace BookStore_API.Controllers
         }
 
         /// <summary>
-        /// User Login Enpoint
+        /// User Registration Endpoint
         /// </summary>
         /// <param name="userDTO"></param>
         /// <returns></returns>
+        [Route("register")]
+        [AllowAnonymous]
+        [HttpPost]
+        public async Task<IActionResult> Register([FromBody] UserDTO userDTO)
+        {
+            try
+            {
+                var username = userDTO.EmailAddress;
+                var password = userDTO.Password;
+                var user = new IdentityUser
+                {
+                    Email=username,
+                    UserName = username
+                };
+                var result = await _userManager.CreateAsync(user, password);
+                if(!result.Succeeded)
+                    return InternalError();
+                
+                await _userManager.AddToRoleAsync(user, "Customer");
+                return Ok(new {result.Succeeded});
+            }
+            catch (Exception)
+            {
+
+                return InternalError();
+            }
+        }
+
+        /// <summary>
+        /// User Login Endpoint
+        /// </summary>
+        /// <param name="userDTO"></param>
+        /// <returns></returns>
+        [Route("login")]
         [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> Login([FromBody] UserDTO userDTO)
         {
             try
             {
-                var result = await _signInManager.PasswordSignInAsync(userDTO.UserName, userDTO.Password, false, false);
+                var result = await _signInManager.PasswordSignInAsync(userDTO.EmailAddress, userDTO.Password, false, false);
                 if (result.Succeeded)
                 {
-                    var user = await _userManager.FindByNameAsync(userDTO.UserName);
+                    var user = await _userManager.FindByNameAsync(userDTO.EmailAddress);
                     var tokenString = await GenerateJSONWebToken(user);
                     return Ok(new {token = tokenString});
                 }
